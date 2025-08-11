@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import SearchWithVoice from './SearchWithVoice';
 import JobCard from './JobCard';
 import { categoryIcons, categoryDescriptions } from '../utils/constants';
+import { Head } from 'vite-react-ssg';
 
 // Placeholder for predefined jobs
 const predefinedJobs = [
@@ -9,6 +10,15 @@ const predefinedJobs = [
   { id: 'pre-2', title: 'Digital Marketing Manager', company: 'Creative Solutions Co.', category: 'Marketing & Sales', location: 'Remote Europe', salary: '$80,000 - $100,000', url: '#', source: 'Internal' },
   { id: 'pre-3', title: 'Data Scientist', company: 'Global Data Analytics', category: 'Data', location: 'Remote US', salary: '$130,000 - $160,000', url: '#', source: 'Internal' },
   { id: 'pre-4', title: 'Customer Support Specialist', company: 'NextGen Services', category: 'Customer Service', location: 'Remote', salary: '$50,000 - $70,000', url: '#', source: 'Internal' },
+];
+
+const quickSearches = [
+  'frontend react',
+  'python backend',
+  'product manager',
+  'data scientist',
+  'designer figma',
+  'devops aws',
 ];
 
 const LandingPage = ({ userLocation, categories, platforms, onCategoryClick, onPlatformClick, onSearch, onAIJobSearch, landingSearchTerm, setLandingSearchTerm, isLoading, jobs = [] }) => {
@@ -35,98 +45,149 @@ const LandingPage = ({ userLocation, categories, platforms, onCategoryClick, onP
   }, [jobs]);
 
   return (
+    <>
+    <Head prioritizeSeoTags htmlAttributes={{ lang: 'en' }}>
+  {/* Primary */}
+  <title>RemNavi — International Remote Jobs (English)</title>
+  <meta
+    name="description"
+    content="Discover international remote jobs in English across engineering, design, product, marketing and more. Fast search, salary filters, and curated listings from top platforms."
+  />
+  <meta
+    name="keywords"
+    content="remote jobs, international remote jobs, english remote jobs, work from home, remote software engineer, remote designer, remote product manager, remote data scientist"
+  />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1" />
+  <link rel="canonical" href="https://remnavi.com/" />
+  <link rel="alternate" hrefLang="en" href="https://remnavi.com/" />
+
+  {/* Open Graph */}
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="RemNavi" />
+  <meta property="og:title" content="RemNavi — International Remote Jobs (English)" />
+  <meta property="og:description" content="Discover international remote jobs in English across engineering, design, product, marketing and more." />
+  <meta property="og:url" content="https://remnavi.com/" />
+  <meta property="og:image" content="https://remnavi.com/og-index.png" />
+  <meta property="og:image:alt" content="RemNavi — Remote jobs worldwide" />
+
+  {/* Twitter */}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="RemNavi — International Remote Jobs (English)" />
+  <meta name="twitter:description" content="Find remote work worldwide in English. Fast search and filters." />
+  <meta name="twitter:image" content="https://remnavi.com/og-index.png" />
+
+  {/* JSON-LD */}
+  <script type="application/ld+json">{`
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "RemNavi",
+    "url": "https://remnavi.com",
+    "logo": "https://remnavi.com/remnavi.png"
+  }`}</script>
+  <script type="application/ld+json">{`
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "RemNavi",
+    "url": "https://remnavi.com",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://remnavi.com/jobs?query={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }`}</script>
+</Head>
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
       
       {/* Hero Section */}
-      <div className="py-20 bg-gradient-to-br from-white to-blue-50">
-        <div className="container mx-auto max-w-7xl text-center px-4">
-          <h1 className="text-4xl sm:text-6xl font-extrabold text-blue-600 mb-4 animate-fade-in">
-            Unlock Your Remote Career.
-          </h1>
-          <p className="text-xl sm:text-2xl text-gray-700 font-light max-w-3xl mx-auto mb-10 animate-fade-in-up">
-            <strong>RemNavi</strong> is the fastest and smartest way to find your next remote job. We aggregate opportunities from the best platforms, so you don't have to. {getGreetingEmoji()}
-          </p>
-
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 p-5 rounded-2xl bg-white shadow-2xl max-w-2xl mx-auto animate-zoom-in">
-            <SearchWithVoice onAIJobSearch={onAIJobSearch} searchTerm={landingSearchTerm} setSearchTerm={setLandingSearchTerm} />
-            <button
-              onClick={() => onSearch(landingSearchTerm)}
-              className="w-full sm:w-auto p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl flex items-center justify-center transform hover:scale-105"
-              aria-label="Search"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </div>
-          
-          {userLocation && (
-            <p className="mt-6 text-lg text-gray-600 animate-fade-in">
-              Hello from <span className="font-semibold text-blue-500">{userLocation}</span>!
+      <div className="py-20 bg-gradient-to-br from-white to-blue-50 min-h-[70vh] max-h-1920 flex flex-col items-center justify-center">
+          <div className="container mx-auto max-w-7xl text-center px-4">
+            <h1 className="text-4xl sm:text-6xl font-extrabold text-blue-600 mb-4">
+              Unlock Your Remote Career.
+            </h1>
+            <p className="text-xl sm:text-2xl text-gray-700 font-light max-w-3xl mx-auto mb-10">
+              <strong>RemNavi</strong> aggregates the best remote jobs so you don’t have to. {getGreetingEmoji()}
             </p>
-          )}
 
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 p-5 rounded-2xl bg-white shadow-2xl max-w-2xl mx-auto">
+              <SearchWithVoice onAIJobSearch={onAIJobSearch} searchTerm={landingSearchTerm} setSearchTerm={setLandingSearchTerm} />
+              <button
+                onClick={() => onSearch(landingSearchTerm)}
+                className="w-full sm:w-auto p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl flex items-center justify-center"
+                aria-label="Search"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {quickSearches.map(q => (
+                <button key={q} onClick={() => onSearch(q)} className="px-3 py-1.5 text-sm rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100">
+                  {q}
+                </button>
+              ))}
+            </div>
+
+            {userLocation && (
+              <p className="mt-6 text-lg text-gray-600">
+                Yes, we also find remote jobs for <span className="font-semibold text-blue-500">{userLocation}</span>!
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-      {/* Trust & Stats Section */}
-      <div className="py-16 bg-white text-center">
-        <div className="container mx-auto max-w-2xl px-4">
-          <div className="flex flex-col items-center gap-10">
-            {/* Stats */}
-            <div className="bg-gray-50 rounded-2xl p-6 shadow-2xl w-full">
+
+        {/* Stats + previews */}
+        <div className="py-16 bg-white text-center">
+          <div className="container mx-auto max-w-2xl px-4">
+            <div className="flex flex-col items-center gap-10">
+              <div className="bg-gray-50 rounded-2xl p-6 shadow-2xl w-full">
                 <div className="flex flex-row justify-between items-center w-full mb-4">
                   <div className="text-left">
                     <h3 className="text-4xl font-bold text-gray-700 mb-2">
                       {isLoading ? '...' : jobs.length > 0 ? jobs.length : '100+'}
                     </h3>
-                    <p className="text-xl text-gray-500">
-                      Live Jobs Indexed
-                    </p>
+                    <p className="text-xl text-gray-500">Live Jobs Indexed</p>
                   </div>
-                  <button
-                    onClick={() => onSearch('')}
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors duration-200"
-                  >
+                  <button onClick={() => onSearch('')} className="text-sm font-medium text-blue-600 hover:text-blue-800">
                     View All Jobs &rarr;
                   </button>
                 </div>
-              
-              {/* Job Previews */}
-              <div className="w-full text-left">
-                <h4 className="font-semibold text-gray-700 mb-2">Some jobs you'll find:</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {displayedJobs.map((job) => (
-                    <div key={job.id} className="p-4 bg-white rounded-lg shadow-inner flex flex-col sm:flex-col sm:items-start sm:justify-between">
-                      <div className="flex-grow">
+
+                <div className="w-full text-left">
+                  <h4 className="font-semibold text-gray-700 mb-2">Some jobs you'll find:</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {displayedJobs.map((job) => (
+                      <div key={job.id} className="p-4 bg-white rounded-lg shadow-inner">
                         <h4 className="font-semibold text-gray-800">{job.title}</h4>
                         <p className="text-sm text-gray-500">{job.company}</p>
+                        <button
+                          onClick={() => onSearch(job.title)}
+                          className="mt-3 px-4 py-2 text-xs font-medium text-blue-600 bg-blue-100 rounded-full hover:bg-blue-200"
+                        >
+                          Find more like this
+                        </button>
                       </div>
-                      <button
-                        onClick={() => onSearch(job.title)}
-                        className="mt-2 sm:mt-4 px-4 py-2 text-xs font-medium text-blue-600 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors duration-200"
-                      >
-                        Find more like this
-                      </button>
-                    </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Logos */}
+              <div className="bg-gray-50 rounded-2xl p-6 shadow-2xl max-w-2xl w-full">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Including {platforms.length}+ platforms.</h3>
+                <div className="flex flex-wrap justify-center items-center gap-6">
+                  {platforms.map(platform => (
+                    <img key={platform.name} src={platform.logo} alt={`${platform.name} logo`} className="h-8 w-auto object-contain" />
                   ))}
                 </div>
               </div>
             </div>
-            
-            {/* Logos */}
-            <div className="bg-gray-50 rounded-2xl p-6 shadow-2xl flex-1 max-w-2xl w-full">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Including {platforms.length}+ platforms.</h3>
-              <div className="flex flex-wrap justify-center items-center gap-6">
-                {platforms.map(platform => (
-                  <img key={platform.name} src={platform.logo} alt={`${platform.name} logo`} className="h-8 w-auto object-contain" />
-                ))}
-              </div>
-            </div>
           </div>
         </div>
-      </div>
-      
-      {/* --- */}
       
       {/* Explore by Category Section */}
       <div className="py-16 bg-gray-50">
@@ -146,7 +207,7 @@ const LandingPage = ({ userLocation, categories, platforms, onCategoryClick, onP
               {categories.filter(cat => cat !== 'All').map((category) => (
                 <button
                   key={category}
-                  onClick={() => onCategoryClick(category)}
+                  onClick={() => onSearch(category)}
                   className="group block w-full bg-white rounded-2xl p-6 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-2 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50"
                 >
                   <div className="mb-2 mx-auto w-12">
@@ -162,9 +223,6 @@ const LandingPage = ({ userLocation, categories, platforms, onCategoryClick, onP
           )}
         </div>
       </div>
-
-      {/* --- */}
-      {/* --- */}
       
       {/* Why RemNavi Section */}
       <div className="py-16 bg-white">
@@ -299,6 +357,7 @@ const LandingPage = ({ userLocation, categories, platforms, onCategoryClick, onP
         </div>
       </div>
     </div>
+    </>
   );
 };
 
