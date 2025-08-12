@@ -4,6 +4,11 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { initialCategoryNames } from '../utils/constants'
 import Jobicy from '../assets/jobicy.png'
 import Remoteok from '../assets/remoteok.webp'
+import Remotive from '../assets/remotive.png'
+import Lever from '../assets/lever.avif'
+import Greenhouse from '../assets/greenhouse.png'
+import Wwr from '../assets/wwr.webp'
+import Hacker from '../assets/hacker.png'
 
 const API_BASE = 'https://remnavi.com/jobs_api.php'
 
@@ -23,10 +28,11 @@ export default function useJobsState() {
     () => [
       { name: 'Jobicy', nameKey: 'jobicy', queryPrefix: 'Jobicy', logo: Jobicy },
       { name: 'Remote OK', nameKey: 'remoteok', queryPrefix: 'Remote OK', logo: Remoteok },
-      { name: 'We Work Remotely', nameKey: 'weworkremotely', queryPrefix: 'We Work Remotely', logo: 'https://placehold.co/100x40/f0f9ff/f97316?text=WWR' },
-      { name: 'Greenhouse (all)', nameKey: 'greenhouse', queryPrefix: 'Greenhouse', logo: 'https://placehold.co/100x40/f0f9ff/059669?text=Greenhouse' },
-      { name: 'Lever (all)', nameKey: 'lever', queryPrefix: 'Lever', logo: 'https://placehold.co/100x40/f0f9ff/3b82f6?text=Lever' },
-      { name: 'Hacker News', nameKey: 'hn', queryPrefix: 'HN', logo: 'https://placehold.co/100x40/f0f9ff/f97316?text=HN' },
+      { name: 'We Work Remotely', nameKey: 'weworkremotely', queryPrefix: 'We Work Remotely', logo: Wwr },
+      { name: 'Greenhouse (all)', nameKey: 'greenhouse', queryPrefix: 'Greenhouse', logo: Greenhouse },
+      { name: 'Lever (all)', nameKey: 'lever', queryPrefix: 'Lever', logo: Lever },
+      { name: 'Hacker News', nameKey: 'hn', queryPrefix: 'HN', logo: Hacker },
+      { name: 'Remotive', nameKey: '', queryPrefix: '', logo: Remotive },
     ],
     []
   )
