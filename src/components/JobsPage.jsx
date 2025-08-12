@@ -12,7 +12,7 @@ const parseSalary = (sal) => {
   if (typeof sal === 'number') return sal;
   let s = String(sal).trim();
   s = s.replace(/[, ]/g, '').replace(/\$/g, '');
-  const rangeParts = s.split(/[-–—to]+/i).map(p => p.trim());
+  const rangeParts = s.split(/[-–—to]+/i).map((p) => p.trim());
   const normalizePart = (p) => {
     const low = p.toLowerCase();
     if (low.endsWith('k')) return parseFloat(low) * 1000;
@@ -69,6 +69,14 @@ const JobsPage = ({
     setLocalSearchTerm(searchTerm || '');
   }, [searchTerm]);
 
+  // push local input back to parent (debounced) so API refetches when cleared/changed
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setSearchTerm((localSearchTerm || '').trim());
+    }, 300);
+    return () => clearTimeout(id);
+  }, [localSearchTerm, setSearchTerm]);
+
   const platformList = platforms || [];
   const continents = ['All', 'Africa', 'Asia', 'Europe', 'North America', 'South America', 'Oceania', 'Worldwide'];
   const countries = {
@@ -90,13 +98,16 @@ const JobsPage = ({
   );
 
   const handleSearch = useCallback(() => {
+    // also push to parent immediately when pressing the button
+    setSearchTerm((localSearchTerm || '').trim());
+
     let filtered = Array.isArray(jobs) ? [...jobs] : [];
 
     // Platform (use queryPrefix to match sources like "Greenhouse:*")
     if (selectedPlatform && selectedPlatform !== 'All') {
-      const plat = platformList.find(p => p.name === selectedPlatform);
+      const plat = platformList.find((p) => p.name === selectedPlatform);
       const prefix = (plat?.queryPrefix || selectedPlatform).toLowerCase();
-      filtered = filtered.filter(j => (j.source || '').toLowerCase().startsWith(prefix));
+      filtered = filtered.filter((j) => (j.source || '').toLowerCase().startsWith(prefix));
     }
 
     // Category (use keyword map if available, else fallback to label substring)
@@ -105,30 +116,28 @@ const JobsPage = ({
       const catLower = selectedCategory.toLowerCase();
 
       if (Array.isArray(keywords) && keywords.length > 0) {
-        const keysLower = keywords.map(k => String(k).toLowerCase());
-        filtered = filtered.filter(job => {
+        const keysLower = keywords.map((k) => String(k).toLowerCase());
+        filtered = filtered.filter((job) => {
           const rawCat = job.category;
           let catStr = '';
           if (typeof rawCat === 'string') catStr = rawCat;
           else if (Array.isArray(rawCat)) catStr = rawCat.join(' ');
           else if (rawCat != null) catStr = JSON.stringify(rawCat);
           const jobCatLower = catStr.toLowerCase();
-          return keysLower.some(k => jobCatLower.includes(k));
+          return keysLower.some((k) => jobCatLower.includes(k));
         });
       } else {
-        filtered = filtered.filter(job =>
-          (job.category || '').toLowerCase().includes(catLower)
-        );
+        filtered = filtered.filter((job) => (job.category || '').toLowerCase().includes(catLower));
       }
     }
 
     // Continent (field or substring)
     if (selectedContinent !== 'All' && selectedContinent !== 'Worldwide') {
       const countriesInContinent = continentToCountries[selectedContinent] || [];
-      filtered = filtered.filter(job => {
+      filtered = filtered.filter((job) => {
         const loc = (job.location || '').toLowerCase();
         const continentMatch = job.continent?.toLowerCase() === selectedContinent.toLowerCase();
-        const countryMatch = countriesInContinent.some(country => loc.includes(country.toLowerCase()));
+        const countryMatch = countriesInContinent.some((country) => loc.includes(country.toLowerCase()));
         return continentMatch || countryMatch;
       });
     }
@@ -136,7 +145,7 @@ const JobsPage = ({
     // Country (field or substring)
     if (selectedCountry !== 'All') {
       const countryLower = selectedCountry.toLowerCase();
-      filtered = filtered.filter(job => {
+      filtered = filtered.filter((job) => {
         const loc = (job.location || '').toLowerCase();
         const locMatch = loc.includes(countryLower);
         const countryFieldMatch = (job.country || '').toLowerCase() === countryLower;
@@ -150,7 +159,7 @@ const JobsPage = ({
       const min = parseInt(minRaw, 10) * 1000;
       const max = maxRaw ? parseInt(maxRaw, 10) * 1000 : Infinity;
 
-      filtered = filtered.filter(job => {
+      filtered = filtered.filter((job) => {
         const num = parseSalary(job.salary);
         return num != null && (selectedSalary.includes('+') ? num >= min : num >= min && num <= max);
       });
@@ -158,15 +167,13 @@ const JobsPage = ({
 
     // Job type (optional field)
     if (selectedJobType !== 'All') {
-      filtered = filtered.filter(
-        job => (job.job_type || '').toLowerCase() === selectedJobType.toLowerCase()
-      );
+      filtered = filtered.filter((job) => (job.job_type || '').toLowerCase() === selectedJobType.toLowerCase());
     }
 
     // Fuzzy search
     if (localSearchTerm && localSearchTerm.trim().length >= 2 && filtered.length > 0) {
-      const ids = new Set(filtered.map(j => j.id));
-      const results = fuse.search(localSearchTerm.trim()).map(r => r.item).filter(j => ids.has(j.id));
+      const ids = new Set(filtered.map((j) => j.id));
+      const results = fuse.search(localSearchTerm.trim()).map((r) => r.item).filter((j) => ids.has(j.id));
       filtered = results.length ? results.slice(0, 100) : filtered;
     }
 
@@ -181,7 +188,8 @@ const JobsPage = ({
     selectedJobType,
     localSearchTerm,
     fuse,
-    platformList
+    platformList,
+    setSearchTerm,
   ]);
 
   // run filtering whenever inputs change
@@ -189,49 +197,35 @@ const JobsPage = ({
     handleSearch();
   }, [handleSearch]);
 
-  // ——— Real-time URL sync ———
+  // ——— Real-time URL sync (client-only filters) ———
   useEffect(() => {
     if (typeof window === 'undefined' || window.location.pathname !== '/jobs') return;
 
     const sp = new URLSearchParams(window.location.search);
 
-    const q = (localSearchTerm || '').trim();
-    if (q) sp.set('q', q); else sp.delete('q');
-
-    if (selectedCategory && selectedCategory !== 'All') sp.set('category', selectedCategory);
-    else sp.delete('category');
-
-    // map selected platform -> source prefix (e.g., "Greenhouse", "Jobicy")
-    if (selectedPlatform && selectedPlatform !== 'All') {
-      const plat = (platformList || []).find(p => p.name === selectedPlatform);
-      const prefix = plat?.queryPrefix || selectedPlatform;
-      sp.set('source', prefix);
-    } else {
-      sp.delete('source');
-    }
+    // IMPORTANT: don't touch q/category/source here — parent manages those.
 
     // client-only filters, useful for sharing deep links
-    if (selectedContinent && selectedContinent !== 'All') sp.set('cont', selectedContinent); else sp.delete('cont');
-    if (selectedCountry && selectedCountry !== 'All')   sp.set('country', selectedCountry);   else sp.delete('country');
-    if (selectedSalary && selectedSalary !== 'All')     sp.set('salary', selectedSalary);     else sp.delete('salary');
-    if (selectedJobType && selectedJobType !== 'All')   sp.set('type', selectedJobType);      else sp.delete('type');
+    if (selectedContinent && selectedContinent !== 'All') sp.set('cont', selectedContinent);
+    else sp.delete('cont');
+
+    if (selectedCountry && selectedCountry !== 'All') sp.set('country', selectedCountry);
+    else sp.delete('country');
+
+    if (selectedSalary && selectedSalary !== 'All') sp.set('salary', selectedSalary);
+    else sp.delete('salary');
+
+    if (selectedJobType && selectedJobType !== 'All') sp.set('type', selectedJobType);
+    else sp.delete('type');
 
     const qs = sp.toString();
     const url = qs ? `/jobs?${qs}` : '/jobs';
     window.history.replaceState({}, '', url);
-  }, [
-    localSearchTerm,
-    selectedCategory,
-    selectedPlatform,
-    selectedContinent,
-    selectedCountry,
-    selectedSalary,
-    selectedJobType,
-    platformList
-  ]);
+  }, [selectedContinent, selectedCountry, selectedSalary, selectedJobType]);
 
   const handleClearFilters = () => {
     setLocalSearchTerm('');
+    setSearchTerm('');
     setSelectedCategory('All');
     setSelectedPlatform('All');
     setSelectedContinent('All');
@@ -254,7 +248,10 @@ const JobsPage = ({
       <Head prioritizeSeoTags htmlAttributes={{ lang: 'en' }}>
         {/* SEO head */}
         <title>Browse Remote Jobs — RemNavi</title>
-        <meta name="description" content="Browse curated remote job listings in English. Filter by category, salary, continent, country, and job type. Updated from top remote job boards." />
+        <meta
+          name="description"
+          content="Browse curated remote job listings in English. Filter by category, salary, continent, country, and job type. Updated from top remote job boards."
+        />
         <meta name="robots" content="index,follow" />
         <link rel="canonical" href="https://remnavi.com/jobs" />
       </Head>
@@ -274,7 +271,9 @@ const JobsPage = ({
               onClick={() => setCurrentPage('landing')}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 shadow-md"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 1.293a1 1 0 00-1.414 0L2 8.586V17a2 2 0 002 2h4a1 1 0 001-1v-4h2v4a1 1 0 001 1h4a2 2 0 002-2V8.586l-7.293-7.293z"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.707 1.293a1 1 0 00-1.414 0L2 8.586V17a2 2 0 002 2h4a1 1 0 001-1v-4h2v4a1 1 0 001 1h4a2 2 0 002-2V8.586l-7.293-7.293z" />
+              </svg>
               Back to Home
             </button>
           </header>
@@ -293,7 +292,18 @@ const JobsPage = ({
                   </label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 10.89 7.876l4.817 4.817a1 1 0 101.414-1.414l-4.816-4.816A6 6 0 108 4z" clipRule="evenodd"/></svg>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-gray-400"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
                     </div>
                     <div className="pl-9 pr-2 rounded-xl border border-gray-300 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500">
                       <SearchWithVoice
@@ -314,7 +324,9 @@ const JobsPage = ({
                   </label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path d="M17.707 10.293l-7-7A1 1 0 009.586 3H4a1 1 0 00-1 1v5.586a1 1 0 00.293.707l7 7a1 1 0 001.414 0l6-6a1 1 0 000-1.414zM7 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M17.707 10.293l-7-7A1 1 0 009.586 3H4a1 1 0 00-1 1v5.586a1 1 0 00.293.707l7 7a1 1 0 001.414 0l6-6a1 1 0 000-1.414zM7 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
                     </div>
                     <select
                       id="category-select"
@@ -323,11 +335,19 @@ const JobsPage = ({
                       className="w-full appearance-none pl-9 pr-10 py-3 rounded-xl bg-gray-50 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {categories.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
                       ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                          fillRule="evenodd"
+                          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -339,7 +359,13 @@ const JobsPage = ({
                   </label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v14H3a1 1 0 100 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 2h1v2H8V4zm3 0h1v2h-1V4zM8 8h1v2H8V8zm3 0h1v2h-1V8zM8 12h1v2H8v-2zm3 0h1v2h-1v-2z" clipRule="evenodd"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                          fillRule="evenodd"
+                          d="M6 2a1 1 0 00-1 1v14H3a1 1 0 100 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 2h1v2H8V4zm3 0h1v2h-1V4zM8 8h1v2H8V8zm3 0h1v2h-1V8zM8 12h1v2H8v-2zm3 0h1v2h-1v-2z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
                     </div>
                     <select
                       id="platform-select"
@@ -348,12 +374,20 @@ const JobsPage = ({
                       className="w-full appearance-none pl-9 pr-10 py-3 rounded-xl bg-gray-50 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="All">All</option>
-                      {platformList.map((p) => (
-                        <option key={p.name} value={p.name}>{p.name}</option>
+                      {(platformList || []).map((p) => (
+                        <option key={p.name} value={p.name}>
+                          {p.name}
+                        </option>
                       ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                          fillRule="evenodd"
+                          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -379,7 +413,9 @@ const JobsPage = ({
                   </label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm-1 14A6 6 0 015 6.1V6a6 6 0 1111.9 1H16a6 6 0 01-7 9z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm-1 14A6 6 0 015 6.1V6a6 6 0 1111.9 1H16a6 6 0 01-7 9z" />
+                      </svg>
                     </div>
                     <select
                       id="continent-select"
@@ -387,10 +423,20 @@ const JobsPage = ({
                       onChange={handleContinentChange}
                       className="w-full appearance-none pl-9 pr-10 py-3 rounded-xl bg-gray-50 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      {continents.map((c) => <option key={c} value={c}>{c}</option>)}
+                      {continents.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                          fillRule="evenodd"
+                          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -402,7 +448,9 @@ const JobsPage = ({
                   </label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path d="M3 2a1 1 0 000 2h9l1 2 2-2h2v10h-2l-1 2-2-2H4v4H2V2h1z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M3 2a1 1 0 000 2h9l1 2 2-2h2v10h-2l-1 2-2-2H4v4H2V2h1z" />
+                      </svg>
                     </div>
                     <select
                       id="country-select"
@@ -411,10 +459,20 @@ const JobsPage = ({
                       disabled={!countries[selectedContinent]}
                       className="w-full appearance-none pl-9 pr-10 py-3 rounded-xl bg-gray-50 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                     >
-                      {countries[selectedContinent]?.map((ct) => <option key={ct} value={ct}>{ct}</option>)}
+                      {countries[selectedContinent]?.map((ct) => (
+                        <option key={ct} value={ct}>
+                          {ct}
+                        </option>
+                      ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                          fillRule="evenodd"
+                          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -426,7 +484,10 @@ const JobsPage = ({
                   </label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v1H2V6z"/><path d="M2 9h16v5a2 2 0 01-2 2H4a2 2 0 01-2-2V9z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v1H2V6z" />
+                        <path d="M2 9h16v5a2 2 0 01-2 2H4a2 2 0 01-2-2V9z" />
+                      </svg>
                     </div>
                     <select
                       id="salary-select"
@@ -434,10 +495,20 @@ const JobsPage = ({
                       onChange={(e) => setSelectedSalary(e.target.value)}
                       className="w-full appearance-none pl-9 pr-10 py-3 rounded-xl bg-gray-50 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      {salaryRanges.map((s) => <option key={s} value={s}>{s}</option>)}
+                      {salaryRanges.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                          fillRule="evenodd"
+                          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -449,7 +520,9 @@ const JobsPage = ({
                   </label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 00-1 1v1H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H9zM8 7h4a1 1 0 010 2H8a1 1 0 010-2z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9 2a1 1 0 00-1 1v1H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H9zM8 7h4a1 1 0 010 2H8a1 1 0 010-2z" />
+                      </svg>
                     </div>
                     <select
                       id="jobtype-select"
@@ -457,10 +530,20 @@ const JobsPage = ({
                       onChange={(e) => setSelectedJobType(e.target.value)}
                       className="w-full appearance-none pl-9 pr-10 py-3 rounded-xl bg-gray-50 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      {jobTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                      {jobTypes.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                          fillRule="evenodd"
+                          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
